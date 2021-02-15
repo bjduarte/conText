@@ -67,3 +67,4 @@ target/
 __pypackages__/
 
 .DS_Store
+text/
