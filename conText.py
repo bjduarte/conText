@@ -13,4 +13,5 @@ for file in os.listdir('.'):
     filename = p.join(('./text/',temp[0], '.txt'))
 
     subprocess.run(['pdftotext', file, filename])
+    print('File converted!')
 
