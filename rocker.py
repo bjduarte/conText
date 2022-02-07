@@ -5,6 +5,7 @@ import sys
 import io
 import os
 import fnmatch
+from tabnanny import check
 import pandas as pandas
 
 
@@ -12,23 +13,6 @@ class RockerParse:
 
   def __init__(self):
     self.rexDict = {}
-    self.systemTime = []
-    self.zooloo = []
-    self.date = []
-    self.IMSI = []
-    self.IMEI = []
-    self.TMSI = []
-    self.LAT = []
-    self.LONG = []
-    self.COURSE = []
-    self.SPEED = []
-    self.ALT = []
-    self.CAUSE = []
-    self.TAC = []
-    self.TA = []
-    self.GPSDATE = []
-    self.GPSTIME = []
-
     self.path = ''
 
     p = ''
@@ -37,135 +21,124 @@ class RockerParse:
         self.path = p.join(("./convertedLogs/", file))
 
   def ReadFile(self, logFile):
+    # initializing the lists to store the regular expressions
+    systemTime = []
+    zooloo = []
+    date = []
+    imsi = []
+    imei = []
+    tmsi = []
+    lat = []
+    long = []
+    course = []
+    speed= []
+    alt = []
+    cause = []
+    tac = []
+    ta = []
+    gpsDate = []
+    gpsTime = []
+
+    # defining the regular expressions for each field
+    SYSTEMTIME = re.compile(r'^\d{2}:\d{2}:\d{2}\s?')
+    ZOOLOO = re.compile(r'\[\d{2}:\d{2}:\d{2}\]')
+    DATE = re.compile(r'\[\d{8}\]')
+    IMSI = re.compile(r'IMSI:[0-9]+:')
+    IMEI = re.compile(r'IMEI:[0-9]+:')
+    TMSI = re.compile(r'TMSI:0xF+:')
+    LAT = re.compile(r'LAT:[NS][0-9]+\.[0-9]+:')
+    LONG = re.compile(r'LONG:[EW][0-9]+\.[0-9]+:')
+    COURSE = re.compile(r'COURSE:[0-9]+\.[0-9]+:')
+    SPEED = re.compile(r'SPEED:[0-9]+\.[0-9]+:')
+    ALT = re.compile(r'ALT:[A-Z][0-9]+\.[0-9]+:')
+    CAUSE = re.compile(r'CAUSE:[0-9]+:')
+    TAC = re.compile(r'TAC:\w+\s\w+\s\w+\s\w+:')
+    TA = re.compile(r'TA:[0-9]+:[0-9A-Z]+:[0-9]+:')
+    GPSDATE = re.compile(r'GPSDATE:\d{8}:')
+    GPSTIME = re.compile(r'GPSTIME:[0-9]+\.[0-9]+:')
+
     try:
       with open(logFile, 'r') as fin:
 
+        # reading each line of the file
         while True:
           line = fin.readline()
 
+          # check to make sure the file has data
           if not line:
             fin.close()
             break
           else:
-
-            systemTime = re.finditer(r'^\d{2}:\d{2}:\d{2}\s?', line)
-            self.systemTime.append(systemTime)
-            zooloo = re.finditer(r'\[\d{2}:\d{2}:\d{2}\]', line)
-            self.zooloo.append(zooloo)
-            date = re.finditer(r'\[\d{8}\]', line)
-            self.date.append(date)
-            IMSI = re.finditer(r'IMSI:[0-9]+:', line)
-            self.IMSI.append(IMSI)
-            IMEI = re.finditer(r'IMEI:[0-9]+:', line)
-            self.IMEI.append(IMEI)
-            TMSI = re.finditer(r'TMSI:0xF+:', line)
-            self.TMSI.append(TMSI)
-            LAT = re.finditer(r'LAT:[NS][0-9]+\.[0-9]+:', line)
-            self.LAT.append(LAT)
-            LONG = re.finditer(r'LONG:[EW][0-9]+\.[0-9]+:', line)
-            self.LONG.append(LONG)
-            COURSE = re.finditer(r'COURSE:[0-9]+\.[0-9]+:', line)
-            self.COURSE.append(COURSE)
-            SPEED = re.finditer(r'SPEED:[0-9]+\.[0-9]+:', line)
-            self.SPEED.append(SPEED)
-            ALT = re.finditer(r'ALT:[A-Z][0-9]+\.[0-9]+:', line)
-            self.ALT.append(ALT)
-            CAUSE = re.finditer(r'CAUSE:[0-9]+:', line)
-            self.CAUSE.append(CAUSE)
-            TAC = re.finditer(r'TAC:\w+\s\w+\s\w+\s\w+:', line)
-            self.TAC.append(TAC)
-            TA = re.finditer(r'TA:[0-9]+:[0-9A-Z]+:[0-9]+:', line)
-            self.TA.append(TA)
-            GPSDATE = re.finditer(r'GPSDATE:\d{8}:', line)
-            self.GPSDATE.append(GPSDATE)
-            GPSTIME = re.finditer(r'GPSTIME:[0-9]+\.[0-9]+:', line)
-            self.GPSTIME.append(GPSTIME)
+            # add all matches to a list
+            systemTime.append(re.finditer(SYSTEMTIME, line))
+            zooloo.append(re.finditer(ZOOLOO, line))
+            date.append(re.finditer(DATE, line))
+            imsi.append(re.finditer(IMSI, line))
+            imei.append(re.finditer(IMEI, line))
+            tmsi.append(re.finditer(TMSI, line))
+            lat.append(re.finditer(LAT, line))
+            long.append(re.finditer(LONG, line))
+            course.append(re.finditer(COURSE, line))
+            speed.append(re.finditer(SPEED, line))
+            alt.append(re.finditer(ALT, line))
+            cause.append(re.finditer(CAUSE, line))
+            tac.append(re.finditer(TAC, line))
+            ta.append(re.finditer(TA, line))
+            gpsDate.append(re.finditer(GPSDATE, line))
+            gpsTime.append(re.finditer(GPSTIME, line))
 
     except FileNotFoundError:
       print("File not found!")
 
+    # adding all lists to the dictionary of fields
     self.rexDict = {
-      'System Time': self.systemTime,
-      'Zooloo Time': self.zooloo,
-      'Date': self.date,
-      'IMSI': self.IMSI,
-      'IMEI': self.IMEI,
-      'TMSI': self.TMSI,
-      'LAT': self.LAT,
-    'LONG': self.LONG,
-    'COURSE': self.COURSE,
-    'SPEED': self.SPEED,
-    'ALT': self.ALT,
-    'CAUSE': self.CAUSE,
-    'TAC': self.TAC,
-    'TA': self.TA,
-    'GPSDATE': self.GPSDATE,
-    'GPSTIME': self.GPSTIME
+      'System Time': systemTime,
+      'Zooloo Time': zooloo,
+      'Date': date,
+      'IMSI': imsi,
+      'IMEI': imei,
+      'TMSI': tmsi,
+      'LAT': lat,
+    'LONG': long,
+    'COURSE': course,
+    'SPEED': speed,
+    'ALT': alt,
+    'CAUSE': cause,
+    'TAC': tac,
+    'TA': ta,
+    'GPS Date': gpsDate,
+    'GPS Time': gpsTime
     }
 
 
-  def WriteData(self):
+  def printCapturedFields(self):
 
-    for key, rx in self.rexDict.items():
-      print(type(rx))
-
-
-      # print(match.group())
-    # for match in self.zooloo:
-    #   print('Zooloo Time: ', match.group())
-    # for match in self.date:
-    #   print('Date: ', match.group())
-    # for match in self.IMSI:
-    #   print(match.group())
-    # for match in self.IMEI:
-    #   print(match.group())
-    # for match in self.TMSI:
-    #   print(match.group())
-    # for match in self.LAT:
-    #   print(match.group())
-    # for match in self.LONG:
-    #   print(match.group())
-    # for match in self.COURSE:
-    #   print(match.group())
-    # for match in self.SPEED:
-    #   print(match.group())
-    # for match in self.ALT:
-    #   print(match.group())
-    # for match in self.CAUSE:
-    #   print(match.group())
-    # for match in self.TAC:
-    #   print(match.group())
-    # for match in self.TA:
-    #   print(match.group())
-    # for match in self.GPSDATE:
-    #   print(match.group())
-    # for match in self.GPSTIME:
-    #   print(match.group())
+    for rexLists in self.rexDict.values():
+      for matches in rexLists:
+        for match in matches:
+          print(      match.group())
 
 
   def CheckInput(self):
 
-    a = len(self.systemTime)
-    b = len(self.zooloo)
-    c = len(self.date)
-    d = len(self.IMSI)
-    e = len(self.IMEI)
-    f = len(self.TMSI)
-    g = len(self.LAT)
-    h = len(self.LONG)
-    i = len(self.COURSE)
-    j = len(self.SPEED)
-    k = len(self.ALT)
-    l = len(self.CAUSE)
-    m = len(self.TAC)
-    n = len(self.TA)
-    o = len(self.GPSDATE)
-    p = len(self.GPSTIME)
+    a = len(self.rexDict.get('System Time'))
+    b = len(self.rexDict.get('Zooloo Time'))
+    c = len(self.rexDict.get('Date'))
+    d = len(self.rexDict.get('IMSI'))
+    e = len(self.rexDict.get('IMEI'))
+    f = len(self.rexDict.get('TMSI'))
+    g = len(self.rexDict.get('LAT'))
+    h = len(self.rexDict.get('LONG'))
+    i = len(self.rexDict.get('COURSE'))
+    j = len(self.rexDict.get('SPEED'))
+    k = len(self.rexDict.get('ALT'))
+    l = len(self.rexDict.get('CAUSE'))
+    m = len(self.rexDict.get('TAC'))
+    n = len(self.rexDict.get('TA'))
+    o = len(self.rexDict.get('GPS Date'))
+    p = len(self.rexDict.get('GPS Time'))
 
-    testPoint = 2
-    checklist = [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, testPoint]
-
-
+    checklist = [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p]
     baseline = max(checklist)
     count = 0
     for datapoint in checklist:
@@ -174,10 +147,10 @@ class RockerParse:
         break
       count +=1
 
-      
 
-
-
+  def extractValue(self):
+    # method to extract the value of the match found in the reg ex
+    pass
 
 
 
@@ -186,5 +159,5 @@ if __name__ == '__main__':
   rkr = RockerParse()
   inFile = rkr.path
   rkr.ReadFile(inFile)
-  rkr.WriteData()
-  # rkr.CheckInput()
+  # rkr.printCapturedFields()
+  rkr.CheckInput()
