@@ -1,35 +1,33 @@
 #!/usr/bin/python3
 
 import re
-from readline import read_init_file
-from shutil import ReadError
 import sys
 import io
 import os
 import fnmatch
 import datetime
 import time
-import json
-
-from pandas import read_feather
+import csv
+import zulu
+import geohash
 
 
 class RockerParse:
 
   def __init__(self):
-    self.rawDict = {}
-    self.striptDict = {}
-    self.path = ''
+    self.lines = []
+    self.rawDataList = []
+    self.striptDataList = []
 
     # defining the regular expressions for each field
     self.SYSTEMTIME = re.compile(r'(?P<SystemTimeValue>^\d{2}:\d{2}:\d{2})\s?')
-    self.ZOOLOO = re.compile(r'\[(?P<ZoolooTimeValue>\d{2}:\d{2}:\d{2})\]')
+    self.ZULU = re.compile(r'\[(?P<ZuluTnimeValue>\d{2}:\d{2}:\d{2})\]')
     self.DATE = re.compile(r'\[(?P<DateValue>\d{8})\]')
     self.IMSI = re.compile(r'IMSI:(?P<IMSIValue>[0-9]+):')
     self.IMEI = re.compile(r'IMEI:(?P<IMEIValue>[0-9]+):')
     self.TMSI = re.compile(r'TMSI:(?P<TMSIValue>0xF+):')
-    self.LAT = re.compile(r'LAT:(?P<LatValue>[NS][0-9]+\.[0-9]+):')
-    self.LONG = re.compile(r'LONG:(?P<LongValue>[EW][0-9]+\.[0-9]+):')
+    self.LAT = re.compile(r'LAT:(?P<direction>[NS])(?P<LatValue>[0-9]+\.[0-9]+):')
+    self.LONG = re.compile(r'LONG:(?P<direction>[EW])(?P<LongValue>[0-9]+\.[0-9]+):')
     self.COURSE = re.compile(r'COURSE:(?P<CourseValue>[0-9]+\.[0-9]+):')
     self.SPEED = re.compile(r'SPEED:(?P<SpeedValue>[0-9]+\.[0-9]+):')
     self.ALT = re.compile(r'ALT:(?P<AltValue>[A-Z][0-9]+\.[0-9]+):')
@@ -43,181 +41,189 @@ class RockerParse:
     p = ''
     for file in os.listdir('./convertedLogs'):
       if fnmatch.fnmatch(file, '*.txt'):
-        self.path = p.join(("./convertedLogs/", file))
-
-  
-  def ReadFile(self, logFile):
+        path = p.join(("./convertedLogs/", file))
 
     try:
-      with open(logFile, 'r') as fin:
-        line = fin.readline()
-
-        if not line:
-          fin.close()()
-        else:
-          return line
+      with open(path, 'r') as fin:
+        self.lines = fin.readlines()
 
     except FileNotFoundError:
       print("File not found!")
 
 
-  def BuildRegExDictionaries(self, line):
-    # initializing the lists to store the regular expressions
-    systemTime = []
-    zooloo = []
-    date = []
-    imsi = []
-    imei = []
-    tmsi = []
-    lat = []
-    long = []
-    course = []
-    speed= []
-    alt = []
-    cause = []
-    tac = []
-    ta = []
-    gpsDate = []
-    gpsTime = []
+  def BuildRegExDictionaries(self):
 
-    while line:
+    for line in self.lines:
+      rawDict = {}
+      striptDict = {}
 
     # add all matches to a list
       systemTimeMatch = re.search(self.SYSTEMTIME, line)
-      if systemTimeMatch == None:
-        systemTime.append('None:')
-      else:
-        systemTime.append(systemTimeMatch.group(1))
+      # if systemTimeMatch == None:
+        # rawDict['System Time'] = 'None:'
+        # striptDict['System Time'] = 'None:'
+      # else:
+        # rawDict['System Time'] = systemTimeMatch.group(1)
+        # striptDict['System Time'] = systemTimeMatch.group(1)
 
-      zoolooTimeMatch = re.search(self.ZOOLOO, line)
-      if zoolooTimeMatch == None:
-       zooloo.append('None:')
-      else:
-        zooloo.append(zoolooTimeMatch.group(1))
+      zuluTimeMatch = re.search(self.ZULU, line)
+      # if zuluTimeMatch == None:
+        # rawDict['Zulu'] = 'None:'
+        # striptDict['Zulu'] = 'None:'
+      # else:
+        # rawDict['Zulu'] = zuluTimeMatch.group(1)
+        # striptDict['Zulu'] = zuluTimeMatch.group(1)
 
       dateMatch = re.search(self.DATE, line)
-      if dateMatch == None:
-        date.append('None:')
-      else:
-        date.append(dateMatch.group(1))
+      # if dateMatch == None:
+        # rawDict['Date'] = 'None:'
+        # striptDict['Date'] = 'None:'
+      # else:
+        # rawDict['Date'] = dateMatch.group(1)
+        # striptDict['Date'] = dateMatch.group(1)
+
+      ts = ''
+      zTime = ts.join((dateMatch.group(1),' ',zuluTimeMatch.group(1)))
+      zuluFormat = zulu.parse(zTime)
+      zuluFormat.timestamp()
+      rawDict['Timestamp'] = zuluFormat
+      striptDict['Timestamp'] = zuluFormat
 
       imsiMatch = re.search(self.IMSI, line)
       if imsiMatch == None:
-        imsi.append('None:')
+        rawDict['IMSI'] = 'None:'
+        striptDict['IMSI'] = 'None:'
+        # self.rawDataList.append(rawDict)
+        # self.striptDataList.append(striptDict)
       else:
-        imsi.append(imsiMatch.group(1))
+        rawDict['IMSI'] = imsiMatch.group(1)
+        striptDict['IMSI'] = imsiMatch.group(1)
+        # self.rawDataList.append(rawDict)
+        # self.striptDataList.append(striptDict)
 
       imeiMatch = re.search(self.IMEI, line)
       if imeiMatch == None:
-        imei.append('None:')
+        rawDict['IMEI'] = 'None:'
+        striptDict['IMEI'] = 'None:'
+        # self.rawDataList.append(rawDict)
+        # self.striptDataList.append(striptDict)
       else:
-        imei.append(imeiMatch.group(1))
+        rawDict['IMEI'] = imeiMatch.group(1)
+        striptDict['IMEI'] = imeiMatch.group(1)
+        # self.rawDataList.append(rawDict)
+        # self.striptDataList.append(striptDict)
 
       tmsiMatch = re.search(self.TMSI, line)
       if tmsiMatch == None:
-        tmsi.append('None:')
+        rawDict['TMSI'] = 'None:'
+        # self.rawDataList.append(rawDict)
       else:
-        tmsi.append(tmsiMatch.group(1))
+        rawDict['TMSI'] = tmsiMatch.group(1)
+        # self.rawDataList.append(rawDict)
 
       latMatch = re.search(self.LAT, line)
       if latMatch == None:
-        lat.append('None:')
+        rawDict['Latitude'] = 'None:'
+        striptDict['Latitude'] = 'None:'
       else:
-        lat.append(latMatch.group(1))
+        direction = latMatch.group(1)
+        lat = latMatch.group(2)
+        latitude = ''
+        if direction == 'S':
+          latitude = ''.join(('-', str(lat)))
+          rawDict['Latitude'] = latitude
+          striptDict['Latitude'] = latitude
+        else:
+          rawDict['Latitude'] = lat
+          striptDict['Latitude'] = lat
 
       longMatch = re.search(self.LONG, line)
       if longMatch == None:
-        long.append('None:')
+        rawDict['Longitude'] = 'None:'
+        striptDict['Longitude'] = 'None:'
       else:
-        long.append(longMatch.group(1))
+        direction = longMatch.group(1)
+        long = longMatch.group(2)
+        longitude = ''
+        if direction == 'W':
+          longitude = ''.join(('-', str(long)))
+          rawDict['Longitude'] = longitude
+          striptDict['Longitude'] = longitude
+        else:
+          rawDict['Longitude'] = long
+          striptDict['Longitude'] = long
 
       courseMatch = re.search(self.COURSE, line)
       if courseMatch == None:
-        course.append('None:')
+        rawDict['Course'] = 'None:'
+        # self.rawDataList.append(rawDict)
       else:
-        course.append(courseMatch.group(1))
+        rawDict['Course'] = courseMatch.group(1)
+        # self.rawDataList.append(rawDict)
 
       speedMatch = re.search(self.SPEED, line)
       if speedMatch == None:
-        speed.append('None:')
+        rawDict['Speed'] = 'None:'
+        # self.rawDataList.append(rawDict)
       else:
-        speed.append(speedMatch.group(1))
+        rawDict['Speed'] = speedMatch.group(1)
+        # self.rawDataList.append(rawDict)
 
       altMatch = re.search(self.ALT, line)
       if altMatch == None:
-        alt.append('None:')
+        rawDict['Alt'] = 'None:'
+        # self.rawDataList.append(rawDict)
       else:
-        alt.append(altMatch.group(1))
+        rawDict['Alt'] = altMatch.group(1)
+        # self.rawDataList.append(rawDict)
 
       causeMatch = re.search(self.CAUSE, line)
       if causeMatch == None:
-        cause.append('None:')
+        rawDict['Cause'] = 'None:'
+        # self.rawDataList.append(rawDict)
       else:
-        cause.append(causeMatch.group(1))
+        rawDict['Cause'] = causeMatch.group(1)
+        # self.rawDataList.append(rawDict)
 
       tacMatch = re.search(self.TAC, line)
       if tacMatch == None:
-        tac.append('None:')
+        rawDict['Tac'] = 'None:'
+        # self.rawDataList.append(rawDict)
       else:
-        tac.append(tacMatch.group(1))
+        rawDict['Tac'] = tacMatch.group(1)
+        # self.rawDataList.append(rawDict)
 
       taMatch = re.search(self.TA, line)
       if taMatch == None:
-        ta.append('None:')
+        rawDict['Ta'] = 'None:'
+        # self.rawDataList.append(rawDict)
       else:
-        ta.append(taMatch.group(1))
+        rawDict['Ta'] = taMatch.group(1)
+        # self.rawDataList.append(rawDict)
 
       gpsDateMatch = re.search(self.GPSDATE, line)
       if gpsDateMatch == None:
-        gpsDate.append('None:')
+        rawDict['GPS Date'] = 'None:'
+        # self.rawDataList.append(rawDict)
       else:
-        gpsDate.append(gpsDateMatch.group(1))
+        rawDict['GPS Date'] = gpsDateMatch.group(1)
+        # self.rawDataList.append(rawDict)
 
       gpsTimeMatch = re.search(self.GPSTIME, line)
       if gpsTimeMatch == None:
-        gpsTime.append('None:')
+        rawDict['GPS Time'] = 'None:'
+        # self.rawDataList.append(rawDict)
       else:
-        gpsTime.append(gpsTimeMatch.group(1))
+        rawDict['GPS Time'] = gpsTimeMatch.group(1)
+        # self.rawDataList.append(rawDict)
 
-    # adding all lists of fields to the raw dictionary
-    self.rawDict = {
-      'System Time': systemTime,
-      'Zooloo Time': zooloo,
-      'Date': date,
-      'IMSI': imsi,
-      'IMEI': imei,
-      'TMSI': tmsi,
-      'LAT': lat,
-      'LONG': long,
-      'COURSE': course,
-      'SPEED': speed,
-      'ALT': alt,
-      'CAUSE': cause,
-      'TAC': tac,
-      'TA': ta,
-      'GPS Date': gpsDate,
-      'GPS Time': gpsTime
-      }
-
-    #  adding only selected lists of fields to the stript dictionary
-    self.striptDict = {
-      'System Time': systemTime,
-      'Zooloo Time': zooloo,
-      'Date': date,
-      'IMSI': imsi,
-      'IMEI': imei,
-      'TMSI': tmsi,
-      'LAT': lat,
-      'LONG': long,
-      'COURSE': course,
-      'TAC': tac,
-      'TA': ta,
-      'GPS Date': gpsDate,
-      'GPS Time': gpsTime
-      }
+    # Adding dictionaries to list
+      self.rawDataList.append(rawDict)
+      self.striptDataList.append(striptDict)
 
 
   def DisplayRawDataFields(self):
+
 
     for rexLists in self.rawDict.values():
       for match in rexLists:
@@ -234,7 +240,7 @@ class RockerParse:
   def VarifyDataFields(self):
 
     a = len(self.self.rawDict.get('System Time'))
-    b = len(self.self.rawDict.get('Zooloo Time'))
+    b = len(self.self.rawDict.get('Zulu'))
     c = len(self.self.rawDict.get('Date'))
     d = len(self.self.rawDict.get('IMSI'))
     e = len(self.self.rawDict.get('IMEI'))
@@ -261,31 +267,37 @@ class RockerParse:
 
 
   def WriteRawFiles(self):
+    columnHeaders = ['Timestamp', 'IMSI', 'IMEI', 'TMSI', 'Latitude', 'Longitude', 'Course', 'Speed', 'Alt', 'Cause', 'Tac', 'Ta', 'GPS Date', 'GPS Time']
 
     p = ''
     today = datetime.datetime.today()
-    filename = ('rawData - {:%b-%d,%Y-%H-%M}.json'.format(today))
+    filename = ('rawData - {:%b-%d,%Y-%H-%M}.csv'.format(today))
     pathToFile = p.join(('rawFiles/',filename))
     with open(pathToFile, 'w') as f:
-      json.dump(self.rawDict, f)
+      writer = csv.DictWriter(f, fieldnames=columnHeaders)
+      writer.writeheader()
+
+      for data in self.rawDataList:
+          writer.writerow(data)
 
     print("Raw Data Written!")
 
 
   def WriteStriptFiles(self):
+    columnHeaders = ['Timestamp', 'IMSI', 'IMEI', 'Latitude', 'Longitude']
 
     p = ''
     today = datetime.datetime.today()
-    filename = ('striptData - {:%b-%d,%Y-%H-%M}.json'.format(today))
+    filename = ('striptData - {:%b-%d,%Y-%H-%M}.csv'.format(today))
     pathToFile = p.join(('striptFiles/',filename))
     with open(pathToFile, 'w') as f:
-      json.dump(self.striptDict, f)
+      writer = csv.DictWriter(f, fieldnames=columnHeaders)
+      writer.writeheader()
+
+      for data in self.striptDataList:
+          writer.writerow(data)
 
     print("Stript Data Written!")
-
-
-  def ReformatData(self):
-    pass
 
 
 if __name__ == '__main__':
@@ -293,26 +305,16 @@ if __name__ == '__main__':
   # initializing a RockerParse instance
   rkr = RockerParse()
 
-  # accessing the file paths
-  inFile = rkr.path
-
-# Reads the log file and returns each line
-  line = rkr.ReadFile(inFile)
-
   # builds up the dictionaries based on RegEx
-  rkr.BuildRegExDictionaries(line)
+  rkr.BuildRegExDictionaries()
 
-  # Displays the data in the raw data dictionary
+  # Displays the data in the dictionaries
   # rkr.DisplayRawDataFields()
-
-  # Displays the data in the stript dictionary
-  rkr.DisplayStriptDataFields()
+  # rkr.DisplayStriptDataFields()
 
   # verifies that all datafields are present
   # rkr.VarifyDataFields()
 
-  # Writes raw data to json file
-  # rkr.WriteRawFiles()
-
-  # Writes all stript data to json file
-  # rkr.WriteStriptFiles()
+  # Writes data to csv file
+  rkr.WriteRawFiles()
+  rkr.WriteStriptFiles()
